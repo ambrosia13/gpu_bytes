@@ -231,6 +231,34 @@ macro_rules! primitive_impl_std140_std430 {
     };
 }
 
+macro_rules! primitive_impl_std140_std430_matrix {
+    ($datatype:ty, columns = $columns:literal) => {
+        impl AsStd140 for $datatype {
+            fn as_std140(&self) -> Std140Bytes {
+                let mut buf = Std140Bytes::new();
+
+                for i in 0..$columns {
+                    buf.write(&self.col(i));
+                }
+
+                buf
+            }
+        }
+
+        impl AsStd430 for $datatype {
+            fn as_std430(&self) -> Std430Bytes {
+                let mut buf = Std430Bytes::new();
+
+                for i in 0..$columns {
+                    buf.write(&self.col(i));
+                }
+
+                buf
+            }
+        }
+    };
+}
+
 primitive_impl_std140_std430!(f32, align = 4);
 primitive_impl_std140_std430!(glam::Vec2, align = 8);
 primitive_impl_std140_std430!(glam::Vec3, align = 16);
@@ -245,6 +273,9 @@ primitive_impl_std140_std430!(u32, align = 4);
 primitive_impl_std140_std430!(glam::UVec2, align = 8);
 primitive_impl_std140_std430!(glam::UVec3, align = 16);
 primitive_impl_std140_std430!(glam::UVec4, align = 16);
+
+primitive_impl_std140_std430_matrix!(glam::Mat3, columns = 3);
+primitive_impl_std140_std430_matrix!(glam::Mat4, columns = 4);
 
 #[cfg(test)]
 mod tests {
