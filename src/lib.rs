@@ -274,8 +274,58 @@ primitive_impl_std140_std430!(glam::UVec2, align = 8);
 primitive_impl_std140_std430!(glam::UVec3, align = 16);
 primitive_impl_std140_std430!(glam::UVec4, align = 16);
 
-primitive_impl_std140_std430_matrix!(glam::Mat3, columns = 3);
-primitive_impl_std140_std430_matrix!(glam::Mat4, columns = 4);
+// primitive_impl_std140_std430_matrix!(glam::Mat3, columns = 3);
+// primitive_impl_std140_std430_matrix!(glam::Mat4, columns = 4);
+
+impl AsStd140 for glam::Mat3 {
+    fn as_std140(&self) -> Std140Bytes {
+        let mut buf = Std140Bytes::new();
+
+        buf.write(&self.col(0));
+        buf.write(&self.col(1));
+        buf.write(&self.col(1));
+
+        buf
+    }
+}
+
+impl AsStd430 for glam::Mat3 {
+    fn as_std430(&self) -> Std430Bytes {
+        let mut buf = Std430Bytes::new();
+
+        buf.write(&self.col(0));
+        buf.write(&self.col(1));
+        buf.write(&self.col(1));
+
+        buf
+    }
+}
+
+impl AsStd140 for glam::Mat4 {
+    fn as_std140(&self) -> Std140Bytes {
+        let mut buf = Std140Bytes::new();
+
+        buf.write(&self.col(0));
+        buf.write(&self.col(1));
+        buf.write(&self.col(1));
+        buf.write(&self.col(3));
+
+        buf
+    }
+}
+
+impl AsStd430 for glam::Mat4 {
+    fn as_std430(&self) -> Std430Bytes {
+        let mut buf = Std430Bytes::new();
+
+        buf.write(&self.col(0));
+        buf.write(&self.col(1));
+        buf.write(&self.col(1));
+        buf.write(&self.col(3));
+
+        buf
+    }
+}
 
 #[cfg(test)]
 mod tests {
