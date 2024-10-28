@@ -274,54 +274,83 @@ primitive_impl_std140_std430!(glam::UVec2, align = 8);
 primitive_impl_std140_std430!(glam::UVec3, align = 16);
 primitive_impl_std140_std430!(glam::UVec4, align = 16);
 
-// primitive_impl_std140_std430_matrix!(glam::Mat3, columns = 3);
-// primitive_impl_std140_std430_matrix!(glam::Mat4, columns = 4);
+primitive_impl_std140_std430_matrix!(glam::Mat3, columns = 3);
+primitive_impl_std140_std430_matrix!(glam::Mat4, columns = 4);
 
-impl AsStd140 for glam::Mat3 {
+impl<T: AsStd140 + Default> AsStd140 for Vec<T> {
     fn as_std140(&self) -> Std140Bytes {
         let mut buf = Std140Bytes::new();
 
-        buf.write(&self.col(0));
-        buf.write(&self.col(1));
-        buf.write(&self.col(1));
+        if self.capacity() == 0 {
+            panic!("A Vec<T> should have an initial capacity before being converted to gpu layout");
+        }
+
+        let mut std140 = T::default().as_std140();
+
+        // in std140, array elements are aligned to a multiple of 16
+        std140.align_to(16);
+
+        let bytes_per_element = std140.as_slice().len();
+
+        // the gpu representation will contain as many bytes as possible to hold the vec's capacity
+        // and fill the appropriate number of bytes with the vec's elements
+        let total_bytes = bytes_per_element * self.capacity();
+
+        for elem in self.iter() {
+            let mut std140 = elem.as_std140();
+
+            // in std140, array elements are aligned to a multiple of 16
+            std140.align_to(16);
+
+            buf.gpu_bytes.bytes.extend_from_slice(std140.as_slice());
+        }
+
+        // now pad with 0's for the remaining capacity
+        let padding = total_bytes - buf.gpu_bytes.bytes.len();
+
+        buf.gpu_bytes
+            .bytes
+            .extend(std::iter::repeat(0u8).take(padding));
+
+        buf.gpu_bytes.alignment = 16;
 
         buf
     }
 }
 
-impl AsStd430 for glam::Mat3 {
+impl<T: AsStd430 + Default> AsStd430 for Vec<T> {
     fn as_std430(&self) -> Std430Bytes {
         let mut buf = Std430Bytes::new();
 
-        buf.write(&self.col(0));
-        buf.write(&self.col(1));
-        buf.write(&self.col(1));
+        if self.capacity() == 0 {
+            panic!("A Vec<T> should have an initial capacity before being converted to gpu layout");
+        }
 
-        buf
-    }
-}
+        let mut std430 = T::default().as_std430();
+        std430.align();
 
-impl AsStd140 for glam::Mat4 {
-    fn as_std140(&self) -> Std140Bytes {
-        let mut buf = Std140Bytes::new();
+        let bytes_per_element = std430.as_slice().len();
 
-        buf.write(&self.col(0));
-        buf.write(&self.col(1));
-        buf.write(&self.col(1));
-        buf.write(&self.col(3));
+        // the gpu representation will contain as many bytes as possible to hold the vec's capacity
+        // and fill the appropriate number of bytes with the vec's elements
+        let total_bytes = bytes_per_element * self.capacity();
 
-        buf
-    }
-}
+        for elem in self.iter() {
+            let mut std430 = elem.as_std430();
+            std430.align();
 
-impl AsStd430 for glam::Mat4 {
-    fn as_std430(&self) -> Std430Bytes {
-        let mut buf = Std430Bytes::new();
+            buf.gpu_bytes.bytes.extend_from_slice(std430.as_slice());
+        }
 
-        buf.write(&self.col(0));
-        buf.write(&self.col(1));
-        buf.write(&self.col(1));
-        buf.write(&self.col(3));
+        // now pad with 0's for the remaining capacity
+        let padding = total_bytes - buf.gpu_bytes.bytes.len();
+
+        buf.gpu_bytes
+            .bytes
+            .extend(std::iter::repeat(0u8).take(padding));
+
+        // the alignment of the array is the same as the alignment of the elements in std430
+        buf.gpu_bytes.alignment = std430.gpu_bytes.alignment;
 
         buf
     }
